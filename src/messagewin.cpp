@@ -1,5 +1,10 @@
 #include "messagewin.h"
+#include "graphics.h"
 
+void MessageWin::resize() {
+	m_width = graphics.get_width() - m_left;
+	m_top = graphics.get_height() - MAX_MESSAGES;
+}
 
 void MessageWin::draw() {
 	for (int y = 0; y < m_height; y++) {

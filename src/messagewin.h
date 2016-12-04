@@ -3,7 +3,6 @@
 #include <vector>
 #include <string>
 #include <chrono>
-#include "graphics.h"
 #include "win.h"
 
 
@@ -15,12 +14,9 @@ public:
 		resize();
 	}
 
-	virtual void resize() {
-		m_width = graphics.get_width() - m_left;
-		m_top = graphics.get_height() - MAX_MESSAGES;
-	}
+	void resize() override;
+	void draw() override;
 
-	virtual void draw();
 	void append(const char* format, ...);
 	void say(const char* format, ...);
 

@@ -113,6 +113,8 @@ int main(int argc, char** argv) {
 	msg_win.resize();
 
 
+//	SDL_StartTextInput();
+
 	bool running = true;
 	while (running) {
 		SDL_Event e;
@@ -135,8 +137,19 @@ int main(int argc, char** argv) {
 				break;
 
 			case SDL_KEYDOWN:
+				printf("'%c' %d | '%c' %d\n",
+						e.key.keysym.sym, e.key.keysym.sym,
+						e.key.keysym.scancode, e.key.keysym.scancode);
 				pat_win.key(e.key.keysym);
-				printf("'%c' %d\n", e.key.keysym.sym, e.key.keysym.sym);
+				break;
+
+
+
+			case SDL_TEXTINPUT:
+				printf("TEXTINPUT '%s'\n", e.text.text);
+				break;
+			case SDL_TEXTEDITING:
+				printf("TEXTEDITING '%s' %d %d\n", e.edit.text, e.edit.start, e.edit.length);
 				break;
 
 			default: break;

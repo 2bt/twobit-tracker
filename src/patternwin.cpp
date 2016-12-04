@@ -3,15 +3,15 @@
 
 #include "patternwin.h"
 #include "messagewin.h"
-#include "graphics.h"
+#include "display.h"
 #include "server.h"
 
 
 
 
 void PatternWin::resize() {
-	m_width = graphics.get_width() - m_left;
-	m_height = graphics.get_height() - m_top - 2;
+	m_width = display.get_width() - m_left;
+	m_height = display.get_height() - m_top - 2;
 	m_scroll_x_view = (m_width - 4) / (CHAN_CHAR_WIDTH + 1);
 
 	m_scroll_y0_view = 8;
@@ -29,10 +29,13 @@ void PatternWin::scroll() {
 	if (m_scroll_y0 < m_cursor_y0 - m_scroll_y0_view + 1) {
 		m_scroll_y0 = m_cursor_y0 - m_scroll_y0_view + 1;
 	}
-	if (m_scroll_y1 > m_cursor_y1) m_scroll_y1 = m_cursor_y1;
-	if (m_scroll_y1 < m_cursor_y1 - m_scroll_y1_view + 1) {
-		m_scroll_y1 = m_cursor_y1 - m_scroll_y1_view + 1;
-	}
+
+	// scroll with scrolloff
+	int y = std::max(0, m_cursor_y1 - 5);
+	m_scroll_y1 = std::min(m_scroll_y1, y);
+	int max_rows = std::max(1, get_max_rows(*m_tune, m_cursor_y0) - m_scroll_y1_view);
+	y = std::min(max_rows, m_cursor_y1 - m_scroll_y1_view + 1 + 5);
+	m_scroll_y1 = std::max(m_scroll_y1, y);
 }
 
 void PatternWin::move_cursor(int dx, int dy0, int dy1) {
@@ -46,6 +49,25 @@ void PatternWin::move_cursor(int dx, int dy0, int dy1) {
 }
 
 
+// colors
+enum {
+	FG_FRAME		= 0x222222,
+	FG_NOTE			= 0xffffff,
+	FG_MACRO		= 0xaaaaaa,
+	FG_PATTERN		= 0xaaaaaa,
+	FG_NUMBER		= 0xaaaaaa,
+	FG_LEVEL		= 0x00ff00,
+
+	BG_BLANK		= 0x000000,
+	BG_MAKRED		= 0x336600,
+	BG_PLAYING		= 0x001111,
+	BG_ROW			= 0x111100,
+	BG_BAR			= 0x0a0a0a,
+
+	BG_CURSOR		= 0x333300,
+	BG_CURSOR_EDIT	= 0x440000,
+	BG_CURSOR_REC	= 0x990000,
+};
 
 
 void PatternWin::draw() {
@@ -63,55 +85,53 @@ void PatternWin::draw() {
 
 
 	// line numbers
-	graphics.style(S_FRAME);
-	graphics.mvprint(m_left, m_top, "   ");
-	graphics.put(ULCORNER);
+	display.style(FG_FRAME, BG_BLANK);
+	display.mvprint(m_left, m_top, "   ");
+	display.put(ULCORNER);
 
-	graphics.mvprint(m_left, m_top + 1, "   ");
-	graphics.put(VLINE);
-	graphics.move(m_left, m_top + 2);
-	graphics.put(ULCORNER);
-	graphics.put(HLINE, 2);
-	graphics.put(PLUS);
+	display.mvprint(m_left, m_top + 1, "   ");
+	display.put(VLINE);
+	display.move(m_left, m_top + 2);
+	display.put(ULCORNER);
+	display.put(HLINE, 2);
+	display.put(PLUS);
 	for (int r = 0; r < m_scroll_y0_view; r++) {
-		graphics.move(m_left, m_top + r + 3);
-		graphics.put(VLINE);
-		if (r + m_scroll_y0 < (int) m_tune->table.size()) {
-			graphics.style(r == m_cursor_y0 ? S_HL_NORMAL : S_NORMAL);
-			graphics.printf("%02X", r + m_scroll_y0);
-			graphics.style(S_FRAME);
-		}
-		else graphics.print("  ");
-		graphics.style(S_FRAME);
-		graphics.put(VLINE);
+		display.move(m_left, m_top + r + 3);
+		display.put(VLINE);
+		display.bold(false);
+		display.fg(FG_NUMBER);
+		display.bg(r + m_scroll_y0 == m_cursor_y0 ? BG_ROW : BG_BLANK);
+		if (r + m_scroll_y0 >= (int) m_tune->table.size()) display.print("  ");
+		else display.printf("%02X", r + m_scroll_y0);
+		display.style(FG_FRAME, BG_BLANK);
+		display.put(VLINE);
 	}
 
 	auto& line = m_tune->table[m_cursor_y0];
 	int max_rows = get_max_rows(*m_tune, m_cursor_y0);
 	int y1 = m_top + m_scroll_y0_view + 3;
 
-	graphics.move(m_left, y1);
-	graphics.put(LTEE);
-	graphics.put(HLINE, 2);
-	graphics.put(PLUS);
+	display.move(m_left, y1);
+	display.put(LTEE);
+	display.put(HLINE, 2);
+	display.put(PLUS);
 	for (int r = 0; r < m_scroll_y1_view; r++) {
 		int i = r + m_scroll_y1;
-		graphics.move(m_left, y1 + r + 1);
-		graphics.put(VLINE);
-		if (i < max_rows) {
-			graphics.style(i == m_cursor_y1 ? S_HL_NORMAL : S_NORMAL);
-			graphics.printf("%02X", i);
-			graphics.style(S_FRAME);
-		}
-		else graphics.print("  ");
-		graphics.style(S_FRAME);
-		graphics.put(VLINE);
+		display.move(m_left, y1 + r + 1);
+		display.put(VLINE);
+		display.bold(false);
+		display.fg(FG_NUMBER);
+		display.bg(r + m_scroll_y1 == m_cursor_y1 ? BG_ROW : BG_BLANK);
+		if (i >= max_rows) display.print("  ");
+		else display.printf("%02X", i);
+		display.style(FG_FRAME, BG_BLANK);
+		display.put(VLINE);
 	}
 
-	graphics.move(m_left, m_top + m_height - 1);
-	graphics.put(' ');
-	graphics.put(HLINE, 2);
-	graphics.put(BTEE);
+	display.move(m_left, m_top + m_height - 1);
+	display.put(' ');
+	display.put(HLINE, 2);
+	display.put(BTEE);
 
 
 	int x = m_left + 4;
@@ -123,146 +143,143 @@ void PatternWin::draw() {
 
 
 		// table head
-
-		graphics.move(x, m_top);
-		graphics.put(HLINE, CHAN_CHAR_WIDTH);
-		graphics.put(chan_nr < chan_limit - 1 ? TTEE : URCORNER);
+		display.move(x, m_top);
+		display.put(HLINE, CHAN_CHAR_WIDTH);
+		display.put(chan_nr < chan_limit - 1 ? TTEE : URCORNER);
 
 
 		// channel level
-		graphics.style(0x002233, 0);
-		graphics.move(x, m_top + 1);
+		display.style(FG_LEVEL, BG_BLANK);
+		display.move(x, m_top + 1);
 		float level = clamp(server.get_chan_level(chan_nr)) * CHAN_CHAR_WIDTH;
 		for (int i = 0; i < CHAN_CHAR_WIDTH; i++) {
-			graphics.put( level > i + 0.25 ? level > i + 0.75 ? LEVELHEIGH : LEVELLOW : ' ');
+			display.put( level > i + 0.25 ? level > i + 0.75 ? LEVELHEIGH : LEVELLOW : ' ');
 		}
 
-		graphics.style(S_NORMAL);
+		display.bold(false);
+		display.fg(FG_NUMBER);
 		if (server.get_muted(chan_nr)) {
-			graphics.move(x, m_top + 1);
-			graphics.printf("MUTED");
+			display.move(x, m_top + 1);
+			display.printf("MUTED");
 		}
-
-		graphics.move(x + CHAN_CHAR_WIDTH - 1, m_top + 1);
-		graphics.printf("%X", chan_nr);
-		graphics.style(S_FRAME);
-		graphics.put(VLINE);
-		graphics.move(x, m_top + 2);
-		graphics.put(HLINE, CHAN_CHAR_WIDTH);
-		graphics.put(chan_nr < chan_limit - 1 ? PLUS : RTEE);
-
-		graphics.move(x, y1);
-		graphics.put(HLINE, CHAN_CHAR_WIDTH);
-		graphics.put(chan_nr < chan_limit - 1 ? PLUS : RTEE);
+		display.move(x + CHAN_CHAR_WIDTH - 1, m_top + 1);
+		display.printf("%X", chan_nr);
 
 
-		// top
+		display.style(FG_FRAME, BG_BLANK);
+		display.put(VLINE);
+		display.move(x, m_top + 2);
+		display.put(HLINE, CHAN_CHAR_WIDTH);
+		display.put(chan_nr < chan_limit - 1 ? PLUS : RTEE);
+
+		display.move(x, y1);
+		display.put(HLINE, CHAN_CHAR_WIDTH);
+		display.put(chan_nr < chan_limit - 1 ? PLUS : RTEE);
+
+
+		// upper table
 		for (int r = 0; r < m_scroll_y0_view; r++) {
 			int i = r + m_scroll_y0;
-			graphics.move(x, m_top + r + 3);
+			display.move(x, m_top + r + 3);
 			if (i < (int) m_tune->table.size()) {
-
-				EStyle style = S_PATTERN;
-				if (i == server_line) style = S_PL_PATTERN;
-				if (i == m_cursor_y0) style = S_HL_PATTERN;
-				if (i == m_cursor_y0 && m_cursor_x == chan_nr) {
-					style = (m_edit_mode == EM_PATTERN_NAME) ? S_ET_PATTERN :
-							(m_edit_mode == EM_RECORD) ? S_RC_PATTERN : S_CS_PATTERN;
-				}
-				graphics.style(style);
+				display.bold(false);
+				display.fg(FG_PATTERN);
+				uint32_t bg = BG_BLANK;
+				if (i == m_cursor_y0) bg = (m_cursor_x == chan_nr) ? BG_CURSOR : BG_ROW;
+				else if	(i == server_line) bg = BG_PLAYING;
+				display.bg(bg);
 
 				auto pn = m_tune->table[i][chan_nr];
-				graphics.printf("%s", pn.c_str());
-				graphics.put(pn == "" ? ' ' : '.', CHAN_CHAR_WIDTH - pn.size());
+				display.printf("%s", pn.c_str());
+				display.put(pn == "" ? ' ' : '.', CHAN_CHAR_WIDTH - pn.size());
 			}
 			else {
-				graphics.style(S_FRAME);
-				graphics.put(' ', CHAN_CHAR_WIDTH);
+				display.bg(BG_BLANK);
+				display.put(' ', CHAN_CHAR_WIDTH);
 			}
-			graphics.style(S_FRAME);
-			graphics.put(VLINE);
+			display.style(FG_FRAME, BG_BLANK);
+			display.put(VLINE);
 		}
 
-		// bottom
+		// bottom table
 		for (int r = 0; r < m_scroll_y1_view; r++) {
 			int i = r + m_scroll_y1;
-			graphics.move(x, y1 + r + 1);
-
 			bool on_pat = (pat && i < (int) pat->size());
 
-			EStyle style = on_pat ? S_NOTE : S_FRAME;
-			if (on_pat && i == server_row && m_tune->table[server_line][chan_nr] == pat_name) style = S_PL_NOTE;
-			if (i == m_cursor_y1) style = S_HL_NOTE;
+			uint32_t bg = (on_pat && i % 16 == 0) ? BG_BAR : BG_BLANK;
+			if (on_pat && i == server_row && m_tune->table[server_line][chan_nr] == pat_name) bg = BG_PLAYING;
+			if (on_pat && i == m_cursor_y1) bg = BG_ROW;
 			if (i == m_cursor_y1 && m_cursor_x == chan_nr) {
-				style = (m_edit_mode == EM_MACRO_NAME) ? S_ET_NOTE :
-						(m_edit_mode == EM_RECORD) ? S_RC_NOTE :
-						S_CS_NOTE;
+				bg = BG_CURSOR;
+//				bg = (m_edit_mode == EM_MACRO_NAME) ? S_ET_NOTE :
+//						(m_edit_mode == EM_RECORD) ? S_RC_NOTE :
+//						S_CS_NOTE;
 			}
 			if (m_edit_mode == EM_MARK_PATTERN
 			&& mark_x_begin() <= chan_nr && chan_nr < mark_x_end()
-			&& mark_y_begin() <= i && i < mark_y_end()) style = S_MK_NOTE;
-			graphics.style(style);
+			&& mark_y_begin() <= i && i < mark_y_end()) bg = BG_MAKRED;
+			display.bg(bg);
 
+			display.move(x, y1 + r + 1);
 			if (on_pat) {
 				auto& row = pat->at(i);
 
+				display.fg(FG_NOTE);
 				if (row.note > 0) {
-					graphics.printf("%c%c%X",
+					display.printf("%c%c%X",
 						"CCDDEFFGGAAB"[(row.note - 1) % 12],
 						"-#-#--#-#-#-"[(row.note - 1) % 12],
 						(row.note - 1) / 12);
 				}
-				else if (row.note == -1) graphics.print("===");
-				else graphics.print("...");
+				else if (row.note == -1) display.print("===");
+				else display.print("...");
 
-				graphics.style(style + 1);
+				display.bold(false);
+				display.fg(FG_MACRO);
 				for (int m = 0; m < MACROS_PER_ROW; m++) {
 					std::string m_macro = row.macros[m];
-					graphics.printf(" %s", m_macro.c_str());
-					graphics.put('.', MACRO_CHAR_WIDTH - m_macro.size());
+					display.printf(" %s", m_macro.c_str());
+					display.put('.', MACRO_CHAR_WIDTH - m_macro.size());
 				}
 			}
 			else {
-				graphics.put(' ', CHAN_CHAR_WIDTH);
+				display.put(' ', CHAN_CHAR_WIDTH);
 			}
-			graphics.style(S_FRAME);
-			graphics.put(VLINE);
+			display.style(FG_FRAME, BG_BLANK);
+			display.put(VLINE);
 		}
 
-		graphics.style(S_FRAME);
-		graphics.move(x, m_top + m_height - 1);
-		graphics.put(HLINE, CHAN_CHAR_WIDTH);
-		graphics.put(chan_nr < chan_limit - 1 ? BTEE : LRCORNER);
-
+		display.style(FG_FRAME, BG_BLANK);
+		display.move(x, m_top + m_height - 1);
+		display.put(HLINE, CHAN_CHAR_WIDTH);
+		display.put(chan_nr < chan_limit - 1 ? BTEE : LRCORNER);
 	}
 
 
 	// extra editing info
-	graphics.style(S_FRAME);
-	graphics.move(m_left, m_top + m_height - 1);
-	graphics.put(LTEE);
-	graphics.move(m_left + 3 + MACRO_CHAR_WIDTH, m_top + m_height - 1);
-	graphics.put(TTEE);
+	display.style(FG_FRAME, BG_BLANK);
+	display.move(m_left, m_top + m_height - 1);
+	display.put(LTEE);
+	display.move(m_left + 3 + MACRO_CHAR_WIDTH, m_top + m_height - 1);
+	display.put(TTEE);
 
 
-	graphics.move(m_left, m_top + m_height);
-	graphics.put(VLINE);
-	graphics.style(S_NOTE);
-	graphics.put('0' + m_octave);
-	graphics.put(' ');
-	graphics.style(S_MACRO);
-	graphics.printf("%s", m_macro.c_str());
-	graphics.put('.', MACRO_CHAR_WIDTH - m_macro.size());
-	graphics.style(S_FRAME);
-	graphics.put(VLINE);
+	display.move(m_left, m_top + m_height);
+	display.put(VLINE);
+	display.style(FG_NOTE, BG_BLANK);
+	display.put('0' + m_octave);
+	display.put(' ');
+	display.style(FG_MACRO, BG_BLANK, false);
+	display.printf("%s", m_macro.c_str());
+	display.put('.', MACRO_CHAR_WIDTH - m_macro.size());
+	display.style(FG_FRAME, BG_BLANK);
+	display.put(VLINE);
 
 
-	graphics.move(m_left, m_top + m_height + 1);
-	graphics.put(LLCORNER);
-	graphics.put(HLINE, 2 + MACRO_CHAR_WIDTH);
-	graphics.put(LRCORNER);
-
-	graphics.style(S_NORMAL);
+	display.move(m_left, m_top + m_height + 1);
+	display.put(LLCORNER);
+	display.put(HLINE, 2 + MACRO_CHAR_WIDTH);
+	display.put(LRCORNER);
 
 
 //	// set cursor position
@@ -466,6 +483,16 @@ void PatternWin::key_normal(const SDL_Keysym & ks) {
 		else server.play(m_cursor_y0, 0, true);
 		return;
 
+	case SDLK_TAB:
+		if (m_edit_mode == EM_RECORD) {
+			m_edit_mode = EM_NORMAL;
+		}
+		else {
+			m_edit_mode = EM_RECORD;
+			if (!server.is_playing()) server.play(m_cursor_y0, m_cursor_y1);
+		}
+		return;
+
 
 	case 'm':	// mute
 		if (ks.mod & KMOD_SHIFT) {
@@ -606,11 +633,6 @@ void PatternWin::key_normal(const SDL_Keysym & ks) {
 					return;
 				}
 			}
-			return;
-
-		case SDLK_TAB:
-			m_edit_mode = EM_RECORD;
-			if (!server.is_playing()) server.play(m_cursor_y0, m_cursor_y1);
 			return;
 
 		case 'S':

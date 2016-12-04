@@ -5,7 +5,7 @@
 #include <uv.h>
 
 #include "server.h"
-#include "graphics.h"
+#include "display.h"
 #include "tune.h"
 #include "messagewin.h"
 #include "patternwin.h"
@@ -14,7 +14,7 @@
 static Tune tune = { {}, {}, {}, 800, 8, };
 
 Server		server;
-Graphics	graphics;
+Display		display;
 PatternWin	pat_win;
 MessageWin	msg_win;
 
@@ -108,7 +108,7 @@ int main(int argc, char** argv) {
 
 	server.start();
 
-	graphics.init();
+	display.init();
 	pat_win.init(&tune, filename);
 	msg_win.resize();
 
@@ -128,7 +128,7 @@ int main(int argc, char** argv) {
 			case SDL_WINDOWEVENT:
 				switch (e.window.event) {
 				case SDL_WINDOWEVENT_RESIZED:
-					graphics.resize(e.window.data1, e.window.data2);
+					display.resize(e.window.data1, e.window.data2);
 					pat_win.resize();
 					msg_win.resize();
 					break;
@@ -158,12 +158,12 @@ int main(int argc, char** argv) {
 
 		uv_run(loop, UV_RUN_NOWAIT);
 
-		graphics.clear();
+		display.clear();
 
 		msg_win.draw();
 		pat_win.draw();
 
-		graphics.present();
+		display.present();
 		SDL_Delay(5);
 	}
 

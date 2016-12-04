@@ -4,39 +4,6 @@
 
 
 
-enum EStyle {
-	S_DEFAULT,
-	S_NORMAL,
-	S_HL_NORMAL,
-
-	S_PATTERN,
-	S_HL_PATTERN,
-	S_CS_PATTERN,
-	S_PL_PATTERN,
-	S_ET_PATTERN,
-	S_RC_PATTERN,
-
-	S_NOTE,
-	S_MACRO,
-	S_HL_NOTE,
-	S_HL_MACRO,
-	S_CS_NOTE,
-	S_CS_MACRO,
-	S_PL_NOTE,
-	S_PL_MACRO,
-	S_ET_NOTE,
-	S_ET_MACRO,
-	S_MK_NOTE,
-	S_MK_MACRO,
-	S_RC_NOTE,
-	S_RC_MACRO,
-
-	S_FRAME,
-
-	S_LEVEL,
-};
-
-
 // special characters
 enum {
 	CURSOR,
@@ -57,12 +24,12 @@ enum {
 
 
 
-class Graphics {
+class Display {
 public:
 
 	bool init();
 
-	~Graphics() {
+	~Display() {
 		SDL_DestroyTexture(m_font);
 		SDL_DestroyRenderer(m_renderer);
 		SDL_DestroyWindow(m_window);
@@ -80,8 +47,14 @@ public:
 		SDL_RenderClear(m_renderer);
 	}
 
-	void style(int i);
-	void style(uint32_t fg, uint32_t bg, bool bold=true);
+	void style(uint32_t fg, uint32_t bg, bool bold=true) {
+		m_fg = fg;
+		m_bg = bg;
+		m_bold = bold;
+	}
+	void fg(uint32_t fg) { m_fg = fg; }
+	void bg(uint32_t bg) { m_bg = bg; }
+	void bold(bool bold) { m_bold = bold; }
 
 
 	void move(int x, int y) {
@@ -146,12 +119,14 @@ private:
 
 	const int char_width	= 8;
 	const int char_height	= 12;
+	int		m_width		= 100;
+	int		m_height	= 50;
+	int		m_x_offset	= 0;
+	int		m_y_offset	= 0;
 
-	int m_width		= 100;
-	int m_height	= 50;
-
-	int m_x_offset = 0;
-	int m_y_offset = 0;
+	int		m_fg;
+	int		m_bg;
+	bool	m_bold;
 
 	SDL_Rect m_dst = { 0, 0, char_width, char_height };
 	SDL_Rect m_src = { 0, 0, char_width, char_height };
@@ -162,4 +137,4 @@ private:
 };
 
 
-extern Graphics graphics;
+extern Display display;

@@ -1,19 +1,19 @@
 #include "messagewin.h"
-#include "graphics.h"
+#include "display.h"
 
 void MessageWin::resize() {
-	m_width = graphics.get_width() - m_left;
-	m_top = graphics.get_height() - MAX_MESSAGES;
+	m_width = display.get_width() - m_left;
+	m_top = display.get_height() - MAX_MESSAGES;
 }
 
 void MessageWin::draw() {
 	for (int y = 0; y < m_height; y++) {
-		graphics.move(m_left, m_top + y);
+		display.move(m_left, m_top + y);
 		if (y < (int) m_messages.size()) {
-			graphics.printf("%-*s", m_width, m_messages[y].text.c_str());
+			display.printf("%-*s", m_width, m_messages[y].text.c_str());
 		}
 		else {
-			graphics.printf("%-*s", m_width, "");
+			display.printf("%-*s", m_width, "");
 		}
 	}
 	auto now = std::chrono::system_clock::now();

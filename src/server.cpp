@@ -24,8 +24,8 @@ void Server::generate_full_log(int subtune, int reps) {
 	int start_line = 0;
 	while (subtune-- > 0) {
 		auto& table = m_tune->table;
-		while (start_line < table.size() - 1 && table[start_line] != TableLine()) start_line++;
-		while (start_line < table.size() - 1 && table[start_line] == TableLine()) start_line++;
+		while (start_line < (int) table.size() - 1 && table[start_line] != TableLine()) start_line++;
+		while (start_line < (int) table.size() - 1 && table[start_line] == TableLine()) start_line++;
 	}
 
 	play(start_line);
@@ -203,8 +203,8 @@ void Server::mix(short* buffer, int length) {
 		m_fx.add_mix(frame);
 
 
-		buffer[i + 0] = clamp((int) (frame[0] * 8000), -32768, 32767);
-		buffer[i + 1] = clamp((int) (frame[1] * 8000), -32768, 32767);
+		buffer[i + 0] = clamp((int) (frame[0] * 6000), -32768, 32767);
+		buffer[i + 1] = clamp((int) (frame[1] * 6000), -32768, 32767);
 //		buffer[i + 0] = map_amp(frame[0]);
 //		buffer[i + 1] = map_amp(frame[1]);
 	}

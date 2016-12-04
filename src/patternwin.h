@@ -62,9 +62,7 @@ private:
 	void key_pattern_name(const SDL_Keysym & ks);
 	void key_macro_name(const SDL_Keysym & ks);
 	void key_mark_pattern(const SDL_Keysym & ks);
-	void key_record(const SDL_Keysym & ks);
 	void key_normal(const SDL_Keysym & ks);
-	void key_rec_norm_common(const SDL_Keysym & ks);
 
 	enum EditMode { EM_NORMAL, EM_RECORD, EM_PATTERN_NAME, EM_MACRO_NAME, EM_MARK_PATTERN };
 	EditMode				m_edit_mode = EM_NORMAL;

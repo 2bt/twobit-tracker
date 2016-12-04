@@ -2,8 +2,8 @@
 #include "display.h"
 
 void MessageWin::resize() {
-	m_width = display.get_width() - m_left;
-	m_top = display.get_height() - MAX_MESSAGES;
+	m_width = display.width() - m_left;
+	m_top = display.height() - MAX_MESSAGES;
 }
 
 void MessageWin::draw() {

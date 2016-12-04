@@ -56,11 +56,7 @@ public:
 	void bg(uint32_t bg) { m_bg = bg; }
 	void bold(bool bold) { m_bold = bold; }
 
-
-	void move(int x, int y) {
-		m_dst.x = x * char_width + m_x_offset;
-		m_dst.y = y * char_height + m_y_offset;
-	}
+	void move(int x, int y);
 
 	void put(char c);
 
@@ -99,26 +95,12 @@ public:
 		va_end(args);
 	}
 
-	int get_width() const { return m_width; }
-	int get_height() const { return m_height; }
-
-
-protected:
-//	void fill_rect(int x, int y, int w, int h) const {
-//		SDL_Rect rect = { x, y, w, h };
-//		SDL_RenderFillRect(m_renderer, &rect);
-//	}
-
-	void set_text_color(uint8_t r, uint8_t g, uint8_t b) const {
-		SDL_SetTextureColorMod(m_font, r, g, b);
-	}
-
+	int width() const { return m_width; }
+	int height() const { return m_height; }
 
 
 private:
 
-	const int char_width	= 8;
-	const int char_height	= 12;
 	int		m_width		= 100;
 	int		m_height	= 50;
 	int		m_x_offset	= 0;
@@ -128,8 +110,8 @@ private:
 	int		m_bg;
 	bool	m_bold;
 
-	SDL_Rect m_dst = { 0, 0, char_width, char_height };
-	SDL_Rect m_src = { 0, 0, char_width, char_height };
+	SDL_Rect m_dst;
+	SDL_Rect m_src;
 
 	SDL_Window*		m_window	= nullptr;
 	SDL_Renderer*	m_renderer	= nullptr;

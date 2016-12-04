@@ -10,8 +10,8 @@
 
 
 void PatternWin::resize() {
-	m_width = display.get_width() - m_left;
-	m_height = display.get_height() - m_top - 2;
+	m_width = display.width() - m_left;
+	m_height = display.height() - m_top - 2;
 	m_scroll_x_view = (m_width - 4) / (CHAN_CHAR_WIDTH + 1);
 
 	m_scroll_y0_view = 8;

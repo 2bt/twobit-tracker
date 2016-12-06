@@ -39,8 +39,6 @@ void Server::generate_full_log(int subtune, int reps) {
 
 
 void Server::start() {
-
-	// start sound server
 	static SDL_AudioSpec spec = { MIXRATE, AUDIO_S16SYS,
 		2, 0, 1024, 0, 0, &Server::audio_callback, this
 	};
@@ -51,7 +49,6 @@ void Server::start() {
 Server::~Server() {
 	SDL_CloseAudio();
 	if (m_log) sf_close(m_log);
-	Pm_Terminate();
 }
 
 void Server::play(int line, int row, bool looping) {

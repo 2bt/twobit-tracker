@@ -20,11 +20,11 @@ void Keyboard::init() {
 
 Keyboard::~Keyboard() {
 	if (m_midi) Pm_Close(m_midi);
+	Pm_Terminate();
 }
 
 
 void Keyboard::tick() {
-	// rough and ready midi support
 	if (!m_midi) return;
 	struct { unsigned char type, val, x, y; } event;
 	for (;;) {

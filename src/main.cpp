@@ -14,11 +14,11 @@
 
 static Tune tune = { {}, {}, {}, 800, 8, };
 
-Server		server;
 Display		display;
 PatternWin	pat_win;
 MessageWin	msg_win;
 Keyboard	keyboard;
+Server		server;
 
 
 
@@ -110,15 +110,12 @@ int main(int argc, char** argv) {
 
 	// become interactive
 
-	keyboard.init();
-	server.start();
-
 	display.init();
 	pat_win.init(&tune, filename);
 	msg_win.resize();
+	keyboard.init();
+	server.start();
 
-
-//	SDL_StartTextInput();
 
 	bool running = true;
 	while (running) {

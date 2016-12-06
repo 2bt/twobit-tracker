@@ -3,7 +3,6 @@
 
 
 void FX::init() {
-
 	memset(m_echo_frames, 0, sizeof(m_echo_frames));
 	m_echo_pos = 0;
 

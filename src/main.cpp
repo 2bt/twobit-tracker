@@ -9,6 +9,7 @@
 #include "tune.h"
 #include "messagewin.h"
 #include "patternwin.h"
+#include "keyboard.h"
 
 
 static Tune tune = { {}, {}, {}, 800, 8, };
@@ -17,6 +18,7 @@ Server		server;
 Display		display;
 PatternWin	pat_win;
 MessageWin	msg_win;
+Keyboard	keyboard;
 
 
 
@@ -98,7 +100,7 @@ int main(int argc, char** argv) {
 
 	if (tune.table.empty()) tune.table.resize(1);
 
-	server.init(&tune, [&](int t, int v) { pat_win.midi(t, v); });
+	server.init(&tune);
 	if (write_tune) {
 		printf("Writing tune...\n");
 		server.generate_full_log(write_subtune, write_reps);
@@ -106,6 +108,9 @@ int main(int argc, char** argv) {
 	}
 
 
+	// become interactive
+
+	keyboard.init();
 	server.start();
 
 	display.init();
@@ -137,19 +142,21 @@ int main(int argc, char** argv) {
 				break;
 
 			case SDL_KEYDOWN:
-				printf("'%c' %d | '%c' %d\n",
+				printf("KEYDOWN    '%c' %d | %d\n",
 						e.key.keysym.sym, e.key.keysym.sym,
-						e.key.keysym.scancode, e.key.keysym.scancode);
+						e.key.keysym.scancode);
 				pat_win.key(e.key.keysym);
 				break;
 
+			case SDL_KEYUP:
+				printf("KEYUP      '%c' %d | %d\n",
+						e.key.keysym.sym, e.key.keysym.sym,
+						e.key.keysym.scancode);
+				break;
 
 
 			case SDL_TEXTINPUT:
-				printf("TEXTINPUT '%s'\n", e.text.text);
-				break;
-			case SDL_TEXTEDITING:
-				printf("TEXTEDITING '%s' %d %d\n", e.edit.text, e.edit.start, e.edit.length);
+				printf("TEXTINPUT  '%s' len = %d\n", e.text.text, strlen(e.text.text));
 				break;
 
 			default: break;

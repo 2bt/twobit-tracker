@@ -4,6 +4,8 @@
 #include "tune.h"
 #include "editcommand.h"
 
+#include <SDL2/SDL.h>
+
 
 class PatternWin : public Win {
 	friend class EditCommand;
@@ -12,14 +14,10 @@ public:
 		PATTERN_CHAR_WIDTH = 9,
 		MACRO_CHAR_WIDTH = 5,
 		CHAN_CHAR_WIDTH = 3 + MACROS_PER_ROW * (MACRO_CHAR_WIDTH + 1),
-
-		POLYPHONY = 5
 	};
 
 
 	void init(Tune* tune, const char* tunefile) {
-		for (auto& c : m_note_to_chan) c = -1;
-		for (auto& n : m_chan_to_note) n = -1;
 		m_tune = tune;
 		m_tunefile = tunefile;
 		resize();
@@ -27,9 +25,12 @@ public:
 
 	void resize() override;
 	void draw() override;
-	void key(const SDL_Keysym & ks) override;
+	void key(const SDL_Keysym & ks);
 
-	void midi(int type, int value);
+
+	void jam(const Row& row);
+	int get_active_channel() const { return m_cursor_x; }
+	const std::string & get_macro() const { return m_macro; }
 
 private:
 
@@ -74,10 +75,6 @@ private:
 	Tune*					m_tune;
 	const char*				m_tunefile;
 
-	// midi keyboard state
-	int				m_note_to_chan[128];
-	int				m_chan_to_note[CHANNEL_COUNT];
-
 
 	std::array<EditCommand,1024>	m_cmds;
 	int m_cmd_head = 0;
@@ -108,3 +105,5 @@ private:
 	}
 
 };
+
+extern PatternWin pat_win;

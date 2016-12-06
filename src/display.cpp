@@ -17,6 +17,7 @@ bool Display::init() {
 	m_font = SDL_CreateTexture(m_renderer, SDL_PIXELFORMAT_ARGB4444, SDL_TEXTUREACCESS_STATIC,
 			CHAR_WIDTH * 16, CHAR_HEIGHT * 16);
 	std::vector< uint16_t > data(CHAR_WIDTH * CHAR_HEIGHT * 256);
+	// decode font bytes
 	for (int i = 0; i < (int) data.size(); ++i) {
 		data[i] = (font[i / 8] & (1 << i % 8)) ? 0xffff : 0;
 	}

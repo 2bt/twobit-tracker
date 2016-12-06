@@ -1,8 +1,10 @@
 #include <SDL2/SDL.h>
+
 #include "server.h"
+#include "keyboard.h"
 
 
-void Server::init(Tune* tune, MidiCallback callback) {
+void Server::init(Tune* tune) {
 	m_tune = tune;
 	m_playing = false;
 	m_lineloop = false;
@@ -12,8 +14,6 @@ void Server::init(Tune* tune, MidiCallback callback) {
 	m_row = 0;
 	for (auto& chan : m_channels) chan.init();
 	m_fx.init();
-
-	m_midi_callback = callback;
 
 	// open log file
 	SF_INFO info = { 0, MIXRATE, 2, SF_FORMAT_WAV | SF_FORMAT_PCM_16 };
@@ -39,16 +39,6 @@ void Server::generate_full_log(int subtune, int reps) {
 
 
 void Server::start() {
-	// midi
-	Pm_Initialize();
-	int dev_count = Pm_CountDevices();
-	int i;
-	for (i = 0; i < dev_count; i++) {
-		auto info = Pm_GetDeviceInfo(i);
-		if (info->output &&
-			std::string(info->name).find("MIDI") != std::string::npos) break;
-	}
-	if (i < dev_count) Pm_OpenInput(&m_midi, 3, nullptr, 0, nullptr, nullptr);
 
 	// start sound server
 	static SDL_AudioSpec spec = { MIXRATE, AUDIO_S16SYS,
@@ -61,7 +51,6 @@ void Server::start() {
 Server::~Server() {
 	SDL_CloseAudio();
 	if (m_log) sf_close(m_log);
-	if (m_midi) Pm_Close(m_midi);
 	Pm_Terminate();
 }
 
@@ -106,15 +95,8 @@ void Server::play_row(int chan_nr, const Row& row) {
 
 void Server::tick() {
 
-	// rough and ready midi support
-	if (m_midi) {
-		struct { unsigned char type, val, x, y; } event;
-		for (;;) {
-			if (!Pm_Read(m_midi, (PmEvent*) &event, 1)) break;
-			m_midi_callback(event.type, event.val);
-		}
-	}
-
+	// midi
+	keyboard.tick();
 
 	// tick server
 	if (m_playing && m_tick == 0) { // new row
@@ -203,10 +185,10 @@ void Server::mix(short* buffer, int length) {
 		m_fx.add_mix(frame);
 
 
-		buffer[i + 0] = clamp((int) (frame[0] * 6000), -32768, 32767);
-		buffer[i + 1] = clamp((int) (frame[1] * 6000), -32768, 32767);
-//		buffer[i + 0] = map_amp(frame[0]);
-//		buffer[i + 1] = map_amp(frame[1]);
+		buffer[i]		= clamp((int) (frame[0] * 6000), -32768, 32767);
+		buffer[i + 1]	= clamp((int) (frame[1] * 6000), -32768, 32767);
+//		buffer[i]		= map_amp(frame[0]);
+//		buffer[i + 1]	= map_amp(frame[1]);
 	}
 	sf_writef_short(m_log, buffer, length / 2);
 }

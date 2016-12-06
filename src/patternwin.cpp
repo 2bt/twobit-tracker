@@ -31,10 +31,11 @@ void PatternWin::scroll() {
 	}
 
 	// scroll with scrolloff
-	int y = std::max(0, m_cursor_y1 - 5);
+	int scrolloff = std::min(m_scroll_y1_view / 2, 16);
+	int y = std::max(0, m_cursor_y1 - scrolloff);
 	m_scroll_y1 = std::min(m_scroll_y1, y);
 	int max_rows = std::max(1, get_max_rows(*m_tune, m_cursor_y0) - m_scroll_y1_view);
-	y = std::min(max_rows, m_cursor_y1 - m_scroll_y1_view + 1 + 5);
+	y = std::min(max_rows, m_cursor_y1 - m_scroll_y1_view + 1 + scrolloff);
 	m_scroll_y1 = std::max(m_scroll_y1, y);
 }
 
@@ -51,22 +52,21 @@ void PatternWin::move_cursor(int dx, int dy0, int dy1) {
 
 // colors
 enum {
-	FG_FRAME		= 0x222222,
+	FG_FRAME		= 0x001111,
 	FG_NOTE			= 0xffffff,
-	FG_MACRO		= 0xaaaaaa,
-	FG_PATTERN		= 0xaaaaaa,
-	FG_NUMBER		= 0xaaaaaa,
+	FG_MACRO		= 0xbbbbbb,
+	FG_PATTERN		= 0xbbbbbb,
+	FG_NUMBER		= 0xbbbbbb,
 	FG_LEVEL		= 0x00ff00,
 
 	BG_BLANK		= 0x000000,
 	BG_MAKRED		= 0x336600,
 	BG_PLAYING		= 0x001111,
-	BG_ROW			= 0x111100,
 	BG_BAR			= 0x0a0a0a,
 
-	BG_CURSOR		= 0x333300,
-	BG_CURSOR_EDIT	= 0x440000,
-	BG_CURSOR_REC	= 0x990000,
+	BG_CURSOR		= 0x443300,
+	BG_CURSOR_EDIT	= 0x550000,
+	BG_CURSOR_REC	= 0x550000,
 };
 
 
@@ -98,9 +98,7 @@ void PatternWin::draw() {
 	for (int r = 0; r < m_scroll_y0_view; r++) {
 		display.move(m_left, m_top + r + 3);
 		display.put(VLINE);
-		display.bold(false);
-		display.fg(FG_NUMBER);
-		display.bg(r + m_scroll_y0 == m_cursor_y0 ? BG_ROW : BG_BLANK);
+		display.style(FG_NUMBER, BG_BLANK, r + m_scroll_y0 == m_cursor_y0);
 		if (r + m_scroll_y0 >= (int) m_tune->table.size()) display.print("  ");
 		else display.printf("%02X", r + m_scroll_y0);
 		display.style(FG_FRAME, BG_BLANK);
@@ -119,9 +117,7 @@ void PatternWin::draw() {
 		int i = r + m_scroll_y1;
 		display.move(m_left, y1 + r + 1);
 		display.put(VLINE);
-		display.bold(false);
-		display.fg(FG_NUMBER);
-		display.bg(r + m_scroll_y1 == m_cursor_y1 ? BG_ROW : BG_BLANK);
+		display.style(FG_NUMBER, BG_BLANK, r + m_scroll_y1 == m_cursor_y1);
 		if (i >= max_rows) display.print("  ");
 		else display.printf("%02X", i);
 		display.style(FG_FRAME, BG_BLANK);
@@ -182,14 +178,14 @@ void PatternWin::draw() {
 			int i = r + m_scroll_y0;
 			display.move(x, m_top + r + 3);
 			if (i < (int) m_tune->table.size()) {
+				auto pn = m_tune->table[i][chan_nr];
+
 				display.bold(false);
 				display.fg(FG_PATTERN);
 				uint32_t bg = BG_BLANK;
-				if (i == m_cursor_y0) bg = (m_cursor_x == chan_nr) ? BG_CURSOR : BG_ROW;
-				else if	(i == server_line) bg = BG_PLAYING;
+				if (i == m_cursor_y0 && m_cursor_x == chan_nr) bg = BG_CURSOR;
+				else if	(i == server_line && !pn.empty()) bg = BG_PLAYING;
 				display.bg(bg);
-
-				auto pn = m_tune->table[i][chan_nr];
 				display.printf("%s", pn.c_str());
 				display.put(pn == "" ? ' ' : '.', CHAN_CHAR_WIDTH - pn.size());
 			}
@@ -207,8 +203,8 @@ void PatternWin::draw() {
 			bool on_pat = (pat && i < (int) pat->size());
 
 			uint32_t bg = (on_pat && i % 16 == 0) ? BG_BAR : BG_BLANK;
-			if (on_pat && i == server_row && m_tune->table[server_line][chan_nr] == pat_name) bg = BG_PLAYING;
-			if (on_pat && i == m_cursor_y1) bg = BG_ROW;
+			if (on_pat && i == server_row
+			&& m_tune->table[server_line][chan_nr] == pat_name) bg = BG_PLAYING;
 			if (i == m_cursor_y1 && m_cursor_x == chan_nr) {
 				bg = BG_CURSOR;
 //				bg = (m_edit_mode == EM_MACRO_NAME) ? S_ET_NOTE :
@@ -282,6 +278,7 @@ void PatternWin::draw() {
 	display.put(LRCORNER);
 
 
+	// TODO:
 //	// set cursor position
 //	if (m_edit_mode == EM_PATTERN_NAME) {
 //		curs_set(1);
@@ -427,6 +424,18 @@ void PatternWin::key_mark_pattern(const SDL_Keysym & ks) {
 
 	default: break;
 	}
+}
+
+
+
+static int scancode_to_note(SDL_Scancode c) {
+	static const char t1[] = { 29, 22, 27,  7,  6, 25, 10,  5, 11, 17, 13, 16, 54 };
+	static const char t2[] = { 20, 31, 26, 32,  8, 21, 34, 23, 35, 28, 36, 24, 12 };
+	int n = 0;
+	const char* a = nullptr;
+	if ((a = strchr(t1, c))) n = a - t1 + 1;
+	else if ((a = strchr(t2, c))) n = a - t2 + 13;
+	return n;
 }
 
 
@@ -654,72 +663,30 @@ void PatternWin::key_normal(const SDL_Keysym & ks) {
 		}
 	}
 
+	if (ks.mod) return;
 
-	int ch = ks.sym;
-
-	if (ch < 32 || ch > 127) return;
-	if (ch == '^') {
+	if (ks.sym == '#') {
 		Row row { -1 };
 		edit<EC::SET_ROW>(row);
 		server.play_row(m_cursor_x, row);
 		return;
 	}
-	static const char* t1 = "ysxdcvgbhnjm,";
-	static const char* t2 = "q2w3er5t6z7ui";
-	const char* a = nullptr;
-	int n;
-	if ((a = strchr(t1, ch))) n = a - t1;
-	else if ((a = strchr(t2, ch))) n = a - t2 + 12;
-	if (a) {
-		Row row { n + 1 + m_octave * 12 };
+
+	if (int n = scancode_to_note(ks.scancode)) {
+		Row row { n + m_octave * 12 };
 		row.macros[0] = m_macro;
+		server.play_row(m_cursor_x, row);
 		if (m_edit_mode == EM_RECORD) edit<EC::RECORD_ROW>(row);
 		else edit<EC::SET_ROW>(row);
-		server.play_row(m_cursor_x, row);
 	}
 }
 
-void PatternWin::midi(int type, int value) {
 
-	Row row;
-	int chan;
-
-	if (type == 128) { // note off event
-		if (m_note_to_chan[value] == -1) return;
-		chan = m_note_to_chan[value];
-		m_chan_to_note[chan] = -1;
-		m_note_to_chan[value] = -1;
-		row.note = -1;
-	}
-	else if (type == 144) {
-
-		chan = m_cursor_x;
-		for (int i = 1; i < POLYPHONY; i++) {
-			if (m_chan_to_note[chan] == -1) break;
-			chan = (chan + 1) % CHANNEL_COUNT;
-		}
-		int old_note = m_chan_to_note[chan];
-		if (old_note != -1) m_note_to_chan[old_note] = -1;
-		m_chan_to_note[chan] = value;
-		m_note_to_chan[value] = chan;
-
-		row.note = value + 1;
-		row.macros[0] = m_macro;
-	}
-	else return;
-
-	server.play_row(chan, row);
-
+void PatternWin::jam(const Row& row) {
 	if (row.note > 0 && m_edit_mode == EM_NORMAL) {
 		edit<EC::SET_ROW>(row);
 	}
 	else if (m_edit_mode == EM_RECORD) {
-
-		// record note off event only if no other voice active
-		if (row.note == -1) {
-			for (int n : m_chan_to_note) if (n != -1) return;
-		}
-
 		edit<EC::RECORD_ROW>(row);
 	}
 }

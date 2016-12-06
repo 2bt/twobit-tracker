@@ -11,7 +11,6 @@ enum {
 	CHAR_HEIGHT	= %d,
 };\n""" % (img.width / 16, img.height / 16))
 
-
 f.write("static const uint8_t font[] = {\n")
 for y in range(img.height):
 	l = ""

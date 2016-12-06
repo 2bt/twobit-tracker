@@ -3,7 +3,6 @@
 #include <mutex>
 #include <functional>
 #include <sndfile.h>
-#include <portmidi.h>
 
 #include "channel.h"
 #include "fx.h"
@@ -12,9 +11,8 @@
 
 class Server {
 public:
-	using MidiCallback = std::function<void(int,int)>;
 	~Server();
-	void	init(Tune* tune, MidiCallback callback);
+	void	init(Tune* tune);
 	void	generate_full_log(int subtune, int reps);
 	void	start();
 
@@ -42,8 +40,6 @@ private:
 	void apply_macro(const std::string& macro_name, Channel& chan) const;
 
 	SNDFILE*			m_log;
-	PortMidiStream*		m_midi = nullptr;
-	MidiCallback		m_midi_callback = nullptr;
 	std::mutex			m_mutex;
 
 	volatile bool 	m_playing;

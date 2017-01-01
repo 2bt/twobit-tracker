@@ -50,10 +50,10 @@ MACRO lead
  wave             = 3 0
 MACRO pd
  attack           = 0.0227
- decay            = 1.0442
+ decay            = 1.0441999
  panning          = -0.2 | +0.02 +0.3 +-0.3
  pulsewidth       = 0.01 | +0.02
- release          = 1.0442
+ release          = 1.0441999
  resolution       = 20
  wave             = 1
 MACRO pd037 < pd

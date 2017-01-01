@@ -25,12 +25,19 @@ public:
 
 	void resize() override;
 	void draw() override;
-	void key(const SDL_Keysym & ks);
+
+	void key(int key, int mod);
+
+	bool keyboard_enabled() const {
+		return m_edit_mode == EM_NORMAL
+			|| m_edit_mode == EM_RECORD;
+	}
 
 
-	void jam(const Row& row);
+	void note_input(const Row& row);
 	int get_active_channel() const { return m_cursor_x; }
 	const std::string & get_macro() const { return m_macro; }
+	int get_octave() const { return m_octave; }
 
 private:
 
@@ -60,10 +67,10 @@ private:
 	void scroll();
 	void move_cursor(int dx, int dy0, int dy1);
 
-	void key_pattern_name(const SDL_Keysym & ks);
-	void key_macro_name(const SDL_Keysym & ks);
-	void key_mark_pattern(const SDL_Keysym & ks);
-	void key_normal(const SDL_Keysym & ks);
+	void key_pattern_name(int key, int mod);
+	void key_macro_name(int key, int mod);
+	void key_mark_pattern(int key, int mod);
+	void key_normal(int key, int mod);
 
 	enum EditMode { EM_NORMAL, EM_RECORD, EM_PATTERN_NAME, EM_MACRO_NAME, EM_MARK_PATTERN };
 	EditMode				m_edit_mode = EM_NORMAL;
@@ -81,9 +88,9 @@ private:
 	int m_cmd_tail = 0;
 	int m_cmd_index = 0;
 
-	template <EditCommand::Type type, typename... Args>
-	void edit(Args&&... args) {
-		m_cmds[m_cmd_index].init<type>(std::forward<Args>(args)...);
+	template <typename... Args>
+	void edit(EditCommand::Type type, Args&&... args) {
+		m_cmds[m_cmd_index].init(type, std::forward<Args>(args)...);
 
 		if (!m_cmds[m_cmd_index].exec(*this)) return;
 		m_cmd_index = (m_cmd_index + 1) % m_cmds.size();

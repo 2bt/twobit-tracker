@@ -20,6 +20,7 @@ void Server::init(Tune* tune) {
 	m_log = sf_open("log.wav", SFM_WRITE, &info);
 }
 
+
 void Server::generate_full_log(int subtune, int reps) {
 	int start_line = 0;
 	while (subtune-- > 0) {
@@ -46,10 +47,12 @@ void Server::start() {
 	SDL_PauseAudio(0);
 }
 
+
 Server::~Server() {
 	SDL_CloseAudio();
 	if (m_log) sf_close(m_log);
 }
+
 
 void Server::play(int line, int row, bool looping) {
 	std::lock_guard<std::mutex> guard(m_mutex);
@@ -67,11 +70,13 @@ void Server::play(int line, int row, bool looping) {
 	m_param_batch.configure(m_tune->envs);
 }
 
+
 void Server::pause() {
 	std::lock_guard<std::mutex> guard(m_mutex);
 	m_playing = false;
 	for (auto& chan : m_channels) chan.note_event(-1);
 }
+
 
 void Server::get_nearest_row(int& line_nr, int& row_nr) const {
 	row_nr = m_row;
@@ -84,16 +89,17 @@ void Server::get_nearest_row(int& line_nr, int& row_nr) const {
 	}
 }
 
+
 void Server::play_row(int chan_nr, const Row& row) {
 	auto& chan = m_channels[chan_nr];
 	for (auto& m : row.macros) apply_macro(m, chan);
 	if (row.note != 0) chan.note_event(row.note);
 }
 
+
 void Server::tick() {
 
-	// midi
-	keyboard.tick();
+	keyboard.process_midi_events();
 
 	// tick server
 	if (m_playing && m_tick == 0) { // new row
@@ -131,10 +137,12 @@ void Server::tick() {
 	}
 }
 
+
 void Server::apply_macro(const Macro& macro, Channel& chan) const {
 	for (auto& m : macro.parents) apply_macro(m, chan);
 	chan.configure_params(macro.envs);
 }
+
 
 void Server::apply_macro(const std::string& macro_name, Channel& chan) const {
 	if (macro_name == "default") {

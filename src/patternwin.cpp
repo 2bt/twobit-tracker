@@ -31,7 +31,7 @@ void PatternWin::scroll() {
 	}
 
 	// scroll with scrolloff
-	int scrolloff = std::min(m_scroll_y1_view / 2, 16);
+	int scrolloff = std::min(m_scroll_y1_view / 2, 8);
 	int y = std::max(0, m_cursor_y1 - scrolloff);
 	m_scroll_y1 = std::min(m_scroll_y1, y);
 	int max_rows = std::max(1, get_max_rows(*m_tune, m_cursor_y0) - m_scroll_y1_view);
@@ -315,31 +315,31 @@ enum {
 	KEY_TAB = 9,
 };
 
-void PatternWin::key(const SDL_Keysym & ks) {
+
+void PatternWin::key(int key, int mod) {
 	switch (m_edit_mode) {
-	case EM_PATTERN_NAME:	key_pattern_name(ks); break;
-	case EM_MACRO_NAME:		key_macro_name(ks); break;
-	case EM_MARK_PATTERN:	key_mark_pattern(ks); break;
+	case EM_PATTERN_NAME:	key_pattern_name(key, mod); break;
+	case EM_MACRO_NAME:		key_macro_name(key, mod); break;
+	case EM_MARK_PATTERN:	key_mark_pattern(key, mod); break;
 	case EM_RECORD:
-	case EM_NORMAL:			key_normal(ks); break;
+	case EM_NORMAL:			key_normal(key, mod); break;
 	}
 }
 
 typedef EditCommand EC;
 
-void PatternWin::key_pattern_name(const SDL_Keysym & ks) {
+void PatternWin::key_pattern_name(int key, int mod) {
 	auto& line = m_tune->table[m_cursor_y0];
 	auto& pat_name = line[m_cursor_x];
-	int ch = ks.sym;
-	if ((isalnum(ch) || strchr("_-+", ch)) && pat_name.size() < PATTERN_CHAR_WIDTH) {
-		pat_name += ch;
+	if ((isalnum(key) || strchr("_-+", key)) && pat_name.size() < PATTERN_CHAR_WIDTH) {
+		pat_name += key;
 	}
-	else if (ch == SDLK_BACKSPACE && pat_name.size() > 0) pat_name.pop_back();
-	else if (ch == SDLK_ESCAPE) {
+	else if (key == SDLK_BACKSPACE && pat_name.size() > 0) pat_name.pop_back();
+	else if (key == SDLK_ESCAPE) {
 		m_edit_mode = EM_NORMAL;
 		pat_name.assign(m_old_name);
 	}
-	else if (ch == SDLK_RETURN) {
+	else if (key == SDLK_RETURN) {
 		m_edit_mode = EM_NORMAL;
 
 		if (pat_name != "" && m_tune->patterns.count(pat_name) == 0) {
@@ -355,33 +355,31 @@ void PatternWin::key_pattern_name(const SDL_Keysym & ks) {
 	}
 }
 
-void PatternWin::key_macro_name(const SDL_Keysym & ks) {
+void PatternWin::key_macro_name(int key, int mod) {
 	auto& line = m_tune->table[m_cursor_y0];
 	auto& pat_name = line[m_cursor_x];
 	auto& pat = m_tune->patterns[pat_name];
 	auto& row = pat[m_cursor_y1];
 	auto& macro_name = row.macros[0];
 
-	int ch = ks.sym;
-	if ((isalnum(ch) || strchr("_-+", ch)) && macro_name.size() < MACRO_CHAR_WIDTH) {
-		macro_name += ch;
+	if ((isalnum(key) || strchr("_-+", key)) && macro_name.size() < MACRO_CHAR_WIDTH) {
+		macro_name += key;
 	}
-	else if (ch == SDLK_BACKSPACE && macro_name.size() > 0) macro_name.pop_back();
-	else if (ch == SDLK_ESCAPE) {
+	else if (key == SDLK_BACKSPACE && macro_name.size() > 0) macro_name.pop_back();
+	else if (key == SDLK_ESCAPE) {
 		m_edit_mode = EM_NORMAL;
 		macro_name.assign(m_old_name);
 	}
-	else if (ch == SDLK_RETURN) {
+	else if (key == SDLK_RETURN) {
 		m_edit_mode = EM_NORMAL;
 		m_macro = macro_name;
 		macro_name.assign(m_old_name);
-		edit<EC::SET_MACRO>(0);
+		edit(EC::SET_MACRO, 0);
 	}
 }
 
-void PatternWin::key_mark_pattern(const SDL_Keysym & ks) {
-	int ch = ks.sym;
-	switch (ch) {
+void PatternWin::key_mark_pattern(int key, int mod) {
+	switch (key) {
 	case SDLK_UP:		move_cursor( 0, 0, -1); return;
 	case SDLK_DOWN:		move_cursor( 0, 0,  1); return;
 	case SDLK_PAGEUP:	move_cursor( 0, 0, -4); return;
@@ -413,13 +411,13 @@ void PatternWin::key_mark_pattern(const SDL_Keysym & ks) {
 	case 'd':
 	case SDLK_BACKSPACE:
 		m_edit_mode = EM_NORMAL;
-		edit<EC::YANK_REGION>(ch != 'y');
+		edit(EC::YANK_REGION, key != 'y');
 		return;
 
 	// transpose
 	case '>':
 	case '<':
-		edit<EC::TRANSPOSE_REGION>(ch == '>' ? 1 : -1);
+		edit(EC::TRANSPOSE_REGION, key == '>' ? 1 : -1);
 		return;
 
 	default: break;
@@ -427,21 +425,9 @@ void PatternWin::key_mark_pattern(const SDL_Keysym & ks) {
 }
 
 
+void PatternWin::key_normal(int key, int mod) {
 
-static int scancode_to_note(SDL_Scancode c) {
-	static const char t1[] = { 29, 22, 27,  7,  6, 25, 10,  5, 11, 17, 13, 16, 54 };
-	static const char t2[] = { 20, 31, 26, 32,  8, 21, 34, 23, 35, 28, 36, 24, 12 };
-	int n = 0;
-	const char* a = nullptr;
-	if ((a = strchr(t1, c))) n = a - t1 + 1;
-	else if ((a = strchr(t2, c))) n = a - t2 + 13;
-	return n;
-}
-
-
-void PatternWin::key_normal(const SDL_Keysym & ks) {
-
-	switch (ks.sym) {
+	switch (key) {
 	case SDLK_RIGHT:	move_cursor(1, 0, 0); return;
 	case SDLK_LEFT:		move_cursor(-1, 0, 0); return;
 
@@ -504,13 +490,13 @@ void PatternWin::key_normal(const SDL_Keysym & ks) {
 
 
 	case 'm':	// mute
-		if (ks.mod & KMOD_SHIFT) {
+		if (mod & KMOD_SHIFT) {
 			server.set_muted(m_cursor_x, !server.get_muted(m_cursor_x));
 			if (server.get_muted(m_cursor_x)) server.play_row(m_cursor_x, { -1 });
 		}
 		return;
 	case 'l':	// solo
-		if (ks.mod & KMOD_SHIFT) {
+		if (mod & KMOD_SHIFT) {
 			int s = 0;
 			for (int i = 0; i < CHANNEL_COUNT; i++) s += server.get_muted(i);
 			if (!server.get_muted(m_cursor_x) && s == CHANNEL_COUNT - 1) {
@@ -536,13 +522,13 @@ void PatternWin::key_normal(const SDL_Keysym & ks) {
 		auto pat = m_tune->patterns.count(pat_name) ? &m_tune->patterns[pat_name] : nullptr;
 		auto row = (pat && m_cursor_y1 < (int) pat->size()) ? &pat->at(m_cursor_y1) : nullptr;
 
-		switch (ks.sym) {
+		switch (key) {
 		case SDLK_UP:
-			if (ks.mod & KMOD_SHIFT) move_cursor(0, -1,  0);
+			if (mod & KMOD_SHIFT) move_cursor(0, -1,  0);
 			else move_cursor(0,  0, -1);
 			return;
 		case SDLK_DOWN:
-			if (ks.mod & KMOD_SHIFT) move_cursor(0, 1,  0);
+			if (mod & KMOD_SHIFT) move_cursor(0, 1,  0);
 			else move_cursor(0,  0, 1);
 			return;
 		case SDLK_PAGEUP:		move_cursor(0,  0, -4); return;
@@ -557,13 +543,13 @@ void PatternWin::key_normal(const SDL_Keysym & ks) {
 			return;
 
 		case SDLK_BACKSPACE:
-			edit<EC::SET_ROW>(Row());
+			edit(EC::SET_ROW, Row());
 			return;
 
 		case '1':			// set 1st macro
 		case '2':			// set 2st macro
-			if (ks.mod & KMOD_SHIFT) {
-				edit<EC::SET_MACRO>(ks.sym - '1');
+			if (mod & KMOD_SHIFT) {
+				edit(EC::SET_MACRO, key - '1');
 				return;
 			}
 			break;
@@ -581,32 +567,32 @@ void PatternWin::key_normal(const SDL_Keysym & ks) {
 			return;
 
 		case 'P':			// paste pattern
-			edit<EC::PASTE_REGION>();
+			edit(EC::PASTE_REGION);
 			return;
 
 		case 'X':			// delete row
-			edit<EC::DELETE_ROW>();
+			edit(EC::DELETE_ROW);
 			return;
 
 		case 'O':			// insert new row
-			edit<EC::INSERT_ROW>(m_cursor_y1);
+			edit(EC::INSERT_ROW, m_cursor_y1);
 			return;
 
 		case 'A':			// append new row
-			edit<EC::INSERT_ROW>(m_cursor_y1 + 1);
+			edit(EC::INSERT_ROW, m_cursor_y1 + 1);
 			scroll();
 			return;
 
 		case KEY_CTRL_X:	// delete line
-			edit<EC::DELETE_LINE>();
+			edit(EC::DELETE_LINE);
 			return;
 
 		case KEY_CTRL_O:	// insert new line
-			edit<EC::INSERT_LINE>(m_cursor_y0);
+			edit(EC::INSERT_LINE, m_cursor_y0);
 			return;
 
 		case KEY_CTRL_A:	// append new line
-			edit<EC::INSERT_LINE>(m_cursor_y0 + 1);
+			edit(EC::INSERT_LINE, m_cursor_y0 + 1);
 			scroll();
 			return;
 
@@ -663,30 +649,21 @@ void PatternWin::key_normal(const SDL_Keysym & ks) {
 		}
 	}
 
-	if (ks.mod) return;
+	if (mod) return;
 
-	if (ks.sym == '#') {
+	if (key == '#') {
 		Row row { -1 };
-		edit<EC::SET_ROW>(row);
+		edit(EC::SET_ROW, row);
 		server.play_row(m_cursor_x, row);
-		return;
-	}
-
-	if (int n = scancode_to_note(ks.scancode)) {
-		Row row { n + m_octave * 12 };
-		row.macros[0] = m_macro;
-		server.play_row(m_cursor_x, row);
-		if (m_edit_mode == EM_RECORD) edit<EC::RECORD_ROW>(row);
-		else edit<EC::SET_ROW>(row);
 	}
 }
 
 
-void PatternWin::jam(const Row& row) {
+void PatternWin::note_input(const Row& row) {
 	if (row.note > 0 && m_edit_mode == EM_NORMAL) {
-		edit<EC::SET_ROW>(row);
+		edit(EC::SET_ROW, row);
 	}
 	else if (m_edit_mode == EM_RECORD) {
-		edit<EC::RECORD_ROW>(row);
+		edit(EC::RECORD_ROW, row);
 	}
 }

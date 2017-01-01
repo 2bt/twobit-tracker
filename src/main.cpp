@@ -3,6 +3,7 @@
 #include <getopt.h>
 #include <ctype.h>
 #include <uv.h>
+#include <set>
 
 #include "server.h"
 #include "display.h"
@@ -35,10 +36,10 @@ void reload(uv_fs_event_t* handle, const char* name, int events, int status) {
 
 
 void usage(const char* prg) {
-	fprintf(stderr, "Usage: %s [options] tune.x [tune.y]\n", prg);
-	fprintf(stderr, "  -w         Write entire tune to log.wav and quit.\n");
-	fprintf(stderr, "  -r reps    Repeate tune. Implies -w.\n");
-	fprintf(stderr, "  -s nr      Choose subtune. Implies -w.\n");
+	printf("Usage: %s [options] tune.x [tune.y]\n", prg);
+	printf("  -w         Write entire tune to log.wav and quit.\n");
+	printf("  -r reps    Repeate tune. Implies -w.\n");
+	printf("  -s nr      Choose subtune. Implies -w.\n");
 }
 
 
@@ -117,6 +118,20 @@ int main(int argc, char** argv) {
 	server.start();
 
 
+	std::set<int> keys = {
+		SDLK_UP,
+		SDLK_DOWN,
+		SDLK_LEFT,
+		SDLK_RIGHT,
+		SDLK_RETURN,
+		SDLK_PAGEUP,
+		SDLK_PAGEDOWN,
+		SDLK_BACKSPACE,
+		SDLK_ESCAPE,
+	};
+	const Uint8* key_state = SDL_GetKeyboardState(NULL);
+
+
 	bool running = true;
 	while (running) {
 		SDL_Event e;
@@ -138,22 +153,28 @@ int main(int argc, char** argv) {
 				}
 				break;
 
-			case SDL_KEYDOWN:
-				printf("KEYDOWN    '%c' %d | %d\n",
-						e.key.keysym.sym, e.key.keysym.sym,
-						e.key.keysym.scancode);
-				pat_win.key(e.key.keysym);
+			case SDL_TEXTINPUT:
+				if (strlen(e.text.text) == 1) {
+					pat_win.key(
+						e.text.text[0],
+						key_state[SDL_SCANCODE_LCTRL] | key_state[SDL_SCANCODE_RCTRL] ? KMOD_CTRL : 0);
+				}
 				break;
+
+			case SDL_KEYDOWN:
+				if (!e.key.keysym.mod && !e.key.repeat && pat_win.keyboard_enabled()) {
+					if (keyboard.event(e.key.keysym.scancode, true)) break;
+				}
+				if (keys.count(e.key.keysym.sym)) {
+					pat_win.key(e.key.keysym.sym, e.key.keysym.mod);
+				}
+				break;
+
 
 			case SDL_KEYUP:
-				printf("KEYUP      '%c' %d | %d\n",
-						e.key.keysym.sym, e.key.keysym.sym,
-						e.key.keysym.scancode);
-				break;
-
-
-			case SDL_TEXTINPUT:
-				printf("TEXTINPUT  '%s' len = %d\n", e.text.text, strlen(e.text.text));
+				if (e.key.keysym.mod == 0 && pat_win.keyboard_enabled()) {
+					keyboard.event(e.key.keysym.scancode, false);
+				}
 				break;
 
 			default: break;

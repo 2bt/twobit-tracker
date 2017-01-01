@@ -24,25 +24,21 @@ public:
 	};
 
 
-	template <Type type>
-	void init() {
+	void init(Type type) {
 		m_type = type;
 	}
 
-	template <Type type>
-	void init(const Row& row) {
+	void init(Type type, const Row& row) {
 		m_type = type;
 		m_row = row;
 	}
 
-	template <Type type>
-	void init(bool clear) {
+	void init(Type type, bool clear) {
 		m_type = type;
 		m_clear = clear;
 	}
 
-	template <Type type>
-	void init(int index) {
+	void init(Type type, int index) {
 		m_type = type;
 		m_index = index;
 	}

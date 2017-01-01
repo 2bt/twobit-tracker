@@ -52,7 +52,7 @@ void PatternWin::move_cursor(int dx, int dy0, int dy1) {
 
 // colors
 enum {
-	FG_FRAME		= 0x001111,
+	FG_FRAME		= 0x002222,
 	FG_NOTE			= 0xffffff,
 	FG_MACRO		= 0xbbbbbb,
 	FG_PATTERN		= 0xbbbbbb,
@@ -61,7 +61,7 @@ enum {
 
 	BG_BLANK		= 0x000000,
 	BG_MAKRED		= 0x336600,
-	BG_PLAYING		= 0x001111,
+	BG_PLAYING		= 0x002222,
 	BG_BAR			= 0x0a0a0a,
 
 	BG_CURSOR		= 0x443300,
